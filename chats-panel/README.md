@@ -102,3 +102,15 @@ Keep these in mind. Each one cost time.
 ## Shared files
 
 The panel and ChatsBar share `marks.json`, `groups.json` and `settings.json` in `~/Library/Application Support/ChatsBar/`. They also share `~/Library/Caches/ChatsBar/refresh-signal`. The [main README](../README.md) describes the formats.
+
+## Release steps
+
+1. Make the change in this repo, never in a private copy.
+2. Bump `version` in `.claude-plugin/plugin.json`.
+3. Run the checks: `claude plugin test chats-panel`, tsc, `claude plugin validate chats-panel --profile directory`, and `zsh scripts/privacy-check.sh`.
+4. Test on your Mac: `/reload-plugins`, then `/chats`. For a ChatsBar change: `zsh build.sh` in `chatsbar/`, then quit and reopen ChatsBar.
+5. Commit and `git push`. The pre-push hook runs the privacy check again and blocks the push on any hit.
+
+Two traps:
+- Never leave compiled `.js` files next to the `.ts` and `.tsx` sources. An import such as `./appcache` can then load an old `.js` copy, not the real code. `.gitignore` ignores them, but delete them too.
+- Screenshots only from demo mode, cropped to the panel or the ChatsBar window, so no real chat shows. `scripts/make-demo-gif.swift` turns them into `docs/images/demo.gif`.
