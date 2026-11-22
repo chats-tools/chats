@@ -7,7 +7,7 @@ The slash command is `/chats`. The `COMMAND` constant at the top of `hooks/regis
 Install:
 
 ```
-/plugin install chats-panel --marketplace chats-tools/chats
+/plugin install chats-panel --marketplace toolsmith-lab/chats
 ```
 
 For use, read the [main README](../README.md). This file is for people who change the code.

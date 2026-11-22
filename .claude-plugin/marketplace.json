@@ -1,6 +1,6 @@
 {
-  "name": "chats-tools",
-  "owner": { "name": "chats-tools contributors" },
+  "name": "toolsmith-lab",
+  "owner": { "name": "toolsmith-lab contributors" },
   "plugins": [
     {
       "name": "chats-panel",

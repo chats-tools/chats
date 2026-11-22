@@ -59,7 +59,7 @@ You need a Mac and the Claude desktop app. ChatsBar needs macOS 13 or newer.
 1. In a Claude Code chat, run:
 
    ```
-   /plugin install chats-panel --marketplace chats-tools/chats
+   /plugin install chats-panel --marketplace toolsmith-lab/chats
    ```
 
 2. Type `/chats` once in a Code chat.
@@ -79,7 +79,7 @@ There is no ready-made app. You build it on your Mac. This takes about one minut
 2. Clone this repo, and build the app:
 
    ```
-   git clone https://github.com/chats-tools/chats.git
+   git clone https://github.com/toolsmith-lab/chats.git
    cd chats/chatsbar
    zsh build.sh
    ```
@@ -242,8 +242,8 @@ The shared folder holds your marks and groups. Make a copy first if you want to 
 Panel:
 
 ```
-/plugin uninstall chats-panel@chats-tools
-/plugin marketplace remove chats-tools
+/plugin uninstall chats-panel@toolsmith-lab
+/plugin marketplace remove toolsmith-lab
 ```
 
 ChatsBar:
