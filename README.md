@@ -132,10 +132,7 @@ A chat can be **Bold**, **Important** (orange), or both. Set them in one of thre
 
 - In the panel: click the ⚙ after the chat, then Bold or Important.
 - In ChatsBar: right-click the chat, then Bold or Important.
-- In the chat title:
-
-- Start the title with `***` for Bold.
-- Start the title with `!` for Important.
+- In the chat title: start it with `***` for Bold, or with `!` for Important.
 
 ## Settings and shared files
 
