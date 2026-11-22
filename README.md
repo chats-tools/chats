@@ -10,7 +10,7 @@ Code chats. Cowork tasks. Scheduled runs. Agents that keep working after you sto
 
 ![The /chats panel: groups, cards and projects (made-up demo chats)](docs/images/demo.gif)
 
-**Useful? Give it a ⭐ on GitHub.** It helps other Claude users find it.
+Useful? Give it a ⭐ on GitHub. It helps other Claude users find it.
 
 ## Groups that cross every wall
 
@@ -128,7 +128,11 @@ There is no ready-made app. You build it on your Mac. This takes about one minut
 
 ### Marks
 
-A chat can be **Bold**, **Important** (orange), or both. You can also set them in the chat title:
+A chat can be **Bold**, **Important** (orange), or both. Set them in one of three ways:
+
+- In the panel: click the ⚙ after the chat, then Bold or Important.
+- In ChatsBar: right-click the chat, then Bold or Important.
+- In the chat title:
 
 - Start the title with `***` for Bold.
 - Start the title with `!` for Important.
