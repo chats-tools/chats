@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="224" fill="#1f2a37"/>
+  <path d="M250 270h380a70 70 0 0 1 70 70v200a70 70 0 0 1-70 70H420l-110 90v-90h-60a70 70 0 0 1-70-70V340a70 70 0 0 1 70-70z" fill="#4a8fe7"/>
+  <path d="M760 420h20a70 70 0 0 1 70 70v180a70 70 0 0 1-70 70h-40v80l-95-80H540a70 70 0 0 1-70-70v-20h160a130 130 0 0 0 130-130z" fill="#3fb950"/>
+  <rect x="270" y="370" width="290" height="40" rx="20" fill="#ffffff" fill-opacity="0.9"/>
+  <rect x="270" y="460" width="200" height="40" rx="20" fill="#ffffff" fill-opacity="0.9"/>
+</svg>

@@ -1,0 +1,11 @@
+{
+  "name": "chats-tools",
+  "owner": { "name": "chats-tools contributors" },
+  "plugins": [
+    {
+      "name": "chats-panel",
+      "source": "./chats-panel",
+      "description": "A Chats panel for the Claude desktop app's Code tab (macOS only)."
+    }
+  ]
+}

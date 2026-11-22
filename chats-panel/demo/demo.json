@@ -1,0 +1,53 @@
+{
+  "about": "Made-up data for demo mode and screenshots. Both readers (chats-panel/hooks/demo.ts and chatsbar/chats.py) read this one file. Times are minutes before now.",
+  "projects": [
+    { "id": "demo-project-garden", "name": "🌱 Garden Planner" },
+    { "id": "demo-project-recipes", "name": "Recipe Book" },
+    { "id": "demo-project-office", "name": "Home Office" },
+    { "id": "demo-project-travel", "name": "Travel 2027" },
+    { "id": "demo-project-old", "name": "Old Experiments" }
+  ],
+  "hiddenProjects": ["Old Experiments"],
+  "chats": [
+    { "id": "demo-cowork-01", "kind": "cowork", "title": "Plan the spring planting calendar", "project": "🌱 Garden Planner", "minutesAgo": 0, "isWorking": true },
+    { "id": "demo-code-01", "kind": "code", "title": "Fix the login form tests", "minutesAgo": 0, "isWorking": true },
+    { "id": "demo-cowork-02", "kind": "cowork", "title": "!*** Order seeds before the sale ends", "project": "🌱 Garden Planner", "minutesAgo": 4 },
+    { "id": "demo-cowork-03", "kind": "cowork", "title": "Weekly meal plan", "project": "Recipe Book", "minutesAgo": 12 },
+    { "id": "demo-code-02", "kind": "code", "title": "Add dark mode to the settings page", "minutesAgo": 25 },
+    { "id": "demo-cowork-04", "kind": "cowork", "title": "Morning news digest", "minutesAgo": 40, "isScheduled": true },
+    { "id": "demo-cowork-05", "kind": "cowork", "title": "Compare desk chairs", "project": "Home Office", "minutesAgo": 75 },
+    { "id": "demo-chat-01", "kind": "chat", "title": "Explain compound interest", "minutesAgo": 110 },
+    { "id": "demo-cowork-06", "kind": "cowork", "title": "Soup recipes for winter", "project": "Recipe Book", "minutesAgo": 180 },
+    { "id": "demo-code-03", "kind": "code", "title": "Refactor the export script", "minutesAgo": 260 },
+    { "id": "demo-cowork-07", "kind": "cowork", "title": "Train times to the coast", "project": "Travel 2027", "minutesAgo": 400 },
+    { "id": "demo-cowork-08", "kind": "cowork", "title": "Sort the receipts folder", "project": "Home Office", "minutesAgo": 900 },
+    { "id": "demo-cowork-09", "kind": "cowork", "title": "Tomato plant diseases", "project": "🌱 Garden Planner", "minutesAgo": 1500 },
+    { "id": "demo-code-04", "kind": "code", "title": "*** Release checklist", "minutesAgo": 2000 },
+    { "id": "demo-cowork-10", "kind": "cowork", "title": "Try a new prompt style", "project": "Old Experiments", "minutesAgo": 5000 }
+  ],
+  "marks": {
+    "demo-cowork-03": { "important": true },
+    "demo-code-02": { "bold": true }
+  },
+  "groups": [
+    { "id": "g-demo-1", "name": "This week", "chats": ["demo-cowork-02", "demo-code-02", "demo-cowork-03"] },
+    { "id": "g-demo-2", "name": "Big ideas", "chats": ["demo-cowork-07"] }
+  ],
+  "usage": [
+    { "label": "5-hour limit", "percentUsed": 23, "resetsInMinutes": 200 },
+    { "label": "Weekly · all models", "percentUsed": 64, "resetsInMinutes": 3000 },
+    { "label": "Weekly · Fable", "percentUsed": 81, "resetsInMinutes": 3000 }
+  ],
+  "context": {
+    "title": "Fix the login form tests",
+    "tokens": 164500,
+    "window": 1000000,
+    "segments": [
+      { "name": "Messages", "tokens": 120000 },
+      { "name": "MCP tools", "tokens": 18000 },
+      { "name": "System tools", "tokens": 16000 },
+      { "name": "System prompt", "tokens": 10500 }
+    ]
+  },
+  "savedCopyMinutesAgo": 2
+}

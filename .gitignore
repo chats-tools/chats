@@ -1,0 +1,6 @@
+.privacy-words
+.DS_Store
+.claude-plugin/types/
+chats-panel/.claude-plugin/types/
+node_modules/
+chats-panel/**/*.js

@@ -1,0 +1,34 @@
+#!/bin/sh
+# pre-push: block the push when scripts/privacy-check.sh finds anything.
+# Git feeds one line per ref on stdin: <local ref> <local sha> <remote ref> <remote sha>
+# Skip with `git push --no-verify` only if you are sure.
+
+top=$(git rev-parse --show-toplevel) || exit 1
+check="$top/scripts/privacy-check.sh"
+if [ ! -f "$check" ]; then
+    echo "pre-push: $check is missing; refusing to push." >&2
+    exit 1
+fi
+
+failed=0
+checked=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -n "$local_sha" ] || continue
+    # deleting a remote ref: nothing to check
+    case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+    checked=1
+    case "$remote_sha" in
+        *[!0]*) sh "$check" --range "$local_sha" --not --remotes </dev/null ;;   # existing remote ref
+        *)      sh "$check" --range "$local_sha" </dev/null ;;                   # new remote ref: all history
+    esac
+    [ $? -eq 0 ] || failed=1
+done
+
+if [ "$failed" -ne 0 ]; then
+    echo "" >&2
+    echo "PUSH BLOCKED: the privacy check found private material (hits listed above)." >&2
+    echo "See them again with:  scripts/privacy-check.sh" >&2
+    echo "Fix the files or rewrite the commits, then push again." >&2
+    exit 1
+fi
+exit 0
