@@ -114,9 +114,10 @@ const DOT_PX = 9
 /** The state dot as a drawing: green working, gray idle. */
 const dotSvg = (isWorking: boolean) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="${isWorking ? '#3fb950' : '#8a8a8a'}"/></svg>`
-// A chat's card opens upward on the last lines of the list, so the panel's bottom edge does
-// not cut it off. 0: every card opens downward.
-const POPUP_UP_LAST = 3
+// A chat's card opens upward when it is taller than the rows under its line, so the end of the
+// panel does not cut it off. Under the list there are at least this many rows: Refresh, the
+// 5 legend lines and the age line, less one to be safe.
+const ROWS_UNDER_LIST = 6
 // The chat line itself opens the chat: a Client (hooks/chatline.tsx) draws the line's styled Text
 // and hears the pointer; a click posts the link to the ui.message hook below, which opens it.
 // (A claude:// Link in a pane does nothing on the desktop, and text inside a Button loses its
@@ -463,6 +464,23 @@ async function readGroups($: EngineInterface) {
 }
 
 /** Reads the file again (ChatsBar may have changed it), changes it, writes, tells every view. */
+// The version in .claude-plugin/plugin.json of the code that runs, shown on the panel's last
+// line. Each open Code chat runs its own copy of the mod, and /reload-plugins updates only the
+// chat where it is typed: this line shows which copy draws the panel. Read once per load.
+let versionRead: string | undefined
+async function modVersion($: EngineInterface): Promise<string> {
+  if (versionRead === undefined) {
+    try {
+      const j: unknown = JSON.parse(await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`))
+      const v = typeof j === 'object' && j !== null ? (j as { version?: unknown }).version : undefined
+      versionRead = typeof v === 'string' ? v : ''
+    } catch {
+      versionRead = ''
+    }
+  }
+  return versionRead
+}
+
 async function changeGroups($: EngineInterface, fn: (gs: ChatGroupDef[]) => ChatGroupDef[]) {
   const o = await readGroupFile($)
   const gs = fn(groupList(o))
@@ -874,6 +892,7 @@ export const register: Register = on => {
     const Svg = 'Svg' in table ? table.Svg : undefined
     const lineOpens = Client !== undefined
     const { chats, bars, projects: found, projectLinks, updatedAt, cacheAt } = await read($, view)
+    const version = await modVersion($)
     // Stable sort: names in projectOrder first, in that order; the rest keep the app's order
     // (starred, then latest). With no projectOrder, the app's order is kept as it is.
     const rank = rankOf(await read($, projectOrder))
@@ -935,23 +954,14 @@ export const register: Register = on => {
       await setEsc($, false)
     }
     // The gear that opens the pop-up `id` (a value of the `moving` atom); a click again closes it.
-    // While a card is open, every other gear is the ⚙ letter: a drawn Svg sits on a layer above
-    // the card and shows through it. Plain text lies under the card. The open card's own gear
-    // stays drawn (the card never covers its own line).
+    // A drawn Svg sits on a layer above a card and shows through it. Chat-line gears stay drawn:
+    // they sit in cells 0-1, and every card starts at POPUP_LEFT (cell 3), so no card covers them.
+    // A title gear (after "My groups", "Cowork Projects" or a group's name) can lie under a card:
+    // while another card is open it is left out, in an empty box of the same width, so nothing
+    // moves. (A ⚙ letter in its place was drawn cut in half.)
     const gear = (id: string, key: string) =>
-      isCardOpen && openKey !== id ? (
-        <Box key={key} flexShrink={0} width={2} alignItems="center" justifyContent="center">
-          <Button
-            key={`${key}-btn`}
-            plain
-            label={MENU_ICON}
-            onPress={async () => {
-              await update($, cardStep, () => '')
-              await update($, moving, () => id)
-              await setEsc($, true)
-            }}
-          />
-        </Box>
+      isCardOpen && openKey !== id && !id.startsWith('menu|') ? (
+        <Box key={key} flexShrink={0} width={2} />
       ) : Svg !== undefined ? (
         // A Button holds only strings and Text: an Svg inside one makes the whole panel fail.
         // So the gear is drawn, and a clear button of two spaces lies on top of it (absolute,
@@ -1116,6 +1126,9 @@ export const register: Register = on => {
     ]
     // The chat's pop-up: its place ("No group" or a group, ticked), a new group, rename or delete
     // its group, Bold, Important. The same jobs as the drop-down had.
+    // The rows of a chat's card: 2 headings, "No group", each group, "New group", Rename and
+    // Delete (when in a group), Bold, Important, Close, and the 2 border rows.
+    const cardRows = (c: Chat) => ordered.length + 9 + (groupOf(keyOf(c)) !== undefined ? 2 : 0)
     const chatPopup = (c: Chat, slot: string, up: boolean) => {
       const key = keyOf(c)
       if (openKey !== `menu|${slot}|${key}`) return null
@@ -1206,7 +1219,7 @@ export const register: Register = on => {
             <Box key={`dot-${slot}-${c.id}`} flexShrink={0}>
               {/* While a card is open, the dot is the ⦁ letter: a drawn dot shows through the card. */}
               {isCardOpen ? (
-                <Text color={c.isWorking ? 'success' : undefined} dimColor={!c.isWorking}>⦁</Text>
+                <Text color={c.isWorking ? 'success' : undefined} dimColor={!c.isWorking}>●</Text>
               ) : (
                 <Svg source={dotSvg(c.isWorking)} alt={c.isWorking ? 'working' : 'idle'} width={DOT_PX} height={DOT_PX} />
               )}
@@ -1541,7 +1554,7 @@ export const register: Register = on => {
                 : "  no recent chats in the app's saved copy"}
             </Text>
           ) : (
-            shown.map((c, i) => row(c, selected === 'Recent' || selectedGroup !== undefined, 'list', shown.length > POPUP_UP_LAST && i >= shown.length - POPUP_UP_LAST))
+            shown.map((c, i) => row(c, selected === 'Recent' || selectedGroup !== undefined, 'list', cardRows(c) > shown.length - 1 - i + ROWS_UNDER_LIST))
           )}
           {projectLinks[selected] !== undefined && (
             <Button
@@ -1589,6 +1602,8 @@ export const register: Register = on => {
             ? `Cowork data: the app's saved copy, ${ago(now - cacheAt)} old.`
             : 'Cowork projects not readable now; showing Cowork chats on this Mac only.'}
         </Text>
+        {/* The version of the code that draws this panel (see modVersion). */}
+        {version !== '' && <Text dimColor>{`/${COMMAND} v${version}`}</Text>}
       </Box>
     )
   })

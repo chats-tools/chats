@@ -103,7 +103,7 @@ test('demo mode end to end', async ($, on) => {
   })
   expect(JSON.parse(files.get(`${DATA}/demo/marks.json`) ?? '{}')).toEqual(FIXTURE.marks)
   expect(JSON.parse(files.get(`${DATA}/demo/groups.json`) ?? '{}')).toEqual({ groups: FIXTURE.groups })
-  // Nothing outside the plugin folder, ChatsBar's data folder and its cache folder was touched.
-  expect(touched.filter(p => !p.includes('/demo/demo.json') && !p.startsWith(`${DATA}/`) && !p.startsWith(`${HOME}/Library/Caches/ChatsBar/`))).toEqual([])
+  // Nothing outside the plugin folder (demo.json, plugin.json), ChatsBar's data folder and its cache folder was touched.
+  expect(touched.filter(p => !p.includes('/demo/demo.json') && !p.endsWith('/.claude-plugin/plugin.json') && !p.startsWith(`${DATA}/`) && !p.startsWith(`${HOME}/Library/Caches/ChatsBar/`))).toEqual([])
   await ui.unmount()
 })

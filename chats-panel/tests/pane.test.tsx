@@ -50,3 +50,22 @@ for (const [open, step, hasUndo] of CASES)
     if (open === 'mygroups|menu|all' && step === '') expect((await ui.find({ type: 'Text', text: /Edit groups/ }))?.text).toBe('Edit groups')
     await ui.unmount()
   })
+
+// The last line shows the version of the code that draws the panel, read from plugin.json.
+test('the panel shows its version', async ($, on) => {
+  on('state.get', (_, e) => {
+    const k = (e as { key?: string }).key
+    if (k === 'view')
+      return { value: { value: { shape: 'view-4', value: { chats: [chat('demo-cowork-01', 'Plan the spring planting calendar')], bars: [], projects: [], projectLinks: {}, usage: '', updatedAt: 1, cacheAt: 0 } }, version: 1 } }
+    const d: Record<string, unknown> = { marks: {}, groups: [], hiddenProjects: null, isOpen: true, projectOrder: [], moving: '', cardStep: '', undoDelete: null, tab: 'Recent' }
+    return { value: { value: k !== undefined && k in d ? d[k] : null, version: 1 } }
+  })
+  on('clock.now', () => ({ value: 1_000_000 }))
+  on('fs.read', (_, e) => {
+    if (e.path.endsWith('/.claude-plugin/plugin.json')) return { value: JSON.stringify({ name: 'chats-panel', version: '9.8.7' }) }
+    throw new Error(`no such file: ${e.path}`)
+  })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /v9\.8\.7/ }))?.text).toBe('/chats v9.8.7')
+  await ui.unmount()
+})

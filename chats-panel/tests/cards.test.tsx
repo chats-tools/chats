@@ -1,8 +1,9 @@
 import { expect, test } from 'claude-code/testing'
 
 // Draws the pane with each card open. A drawn Svg sits on a layer above a card and shows through
-// it. So while a card is open, the only drawn gear is the open card's own gear, and no drawn dot
-// is left. With no card open, the gears and dots stay drawn (the look does not change).
+// it. So while a card is open, no drawn dot is left, and a title gear is left out unless its
+// card is the open one. Chat-line gears stay drawn: no card covers them. With no card open,
+// the gears and dots stay drawn (the look does not change).
 const PANE = {
   plugin: 'chats-panel',
   component: 'Pane',
@@ -52,14 +53,17 @@ for (const [open, name, step] of CARDS)
     const alts = (await ui.findAll({ type: 'Svg' })).map(s => String((s.props as { alt?: unknown }).alt ?? ''))
     const gears = alts.filter(a => a === GEAR).length
     const dots = alts.filter(a => DOTS.includes(a)).length
+    // Chat-line gears stay drawn (no card covers cells 0-1). Title gears: drawn with no card
+    // open; while a card is open, only the open card's own title gear stays.
+    const chatLines = open.startsWith('gmenu') ? 1 : 3 // chats in the list (the group has one)
+    const titleGears = open.startsWith('gmenu') ? 3 : 2 // My groups, Cowork Projects (+ the group)
+    const openIsTitle = open !== '' && !open.startsWith('menu|')
     if (open === '') {
-      expect(gears).toBeGreaterThan(1)
+      expect(gears).toBe(chatLines + titleGears)
       expect(dots).toBeGreaterThan(0)
     } else {
-      expect(gears).toBe(1)
+      expect(gears).toBe(chatLines + (openIsTitle ? 1 : 0))
       expect(dots).toBe(0)
-      // The other gears are still there, as the ⚙ letter.
-      expect((await ui.findAll({ type: 'Button', text: '⚙' })).length).toBeGreaterThan(0)
     }
     await ui.unmount()
   })

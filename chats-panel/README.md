@@ -23,9 +23,11 @@ For use, read the [main README](../README.md). This file is for people who chang
 - **A gear (⚙)** after each chat, after "My groups", after "Cowork Projects" and after a picked group. It opens a floating card of plain buttons: move to a group, new group, Bold, Important, Edit groups (Rename and Delete), and show or hide projects.
 - **Delete** asks "are you sure". It has a 20-second Undo next to "My groups". Esc closes a card.
 - **Bold and Important** (orange) marks. A chat title can also start with `***` or `!` to set them.
-- **A legend** at the bottom.
+- **A legend** at the bottom, then the version of the code that draws the panel ("/chats v0.12.4"), read from `.claude-plugin/plugin.json`.
 
 After `/reload-plugins`, the panel comes back by itself.
+
+Each open Code chat runs its own copy of the mod, loaded when the chat starts. `/reload-plugins` loads the new code only in the chat where you type it. The panel can be drawn by another open chat that still has old code. Check the version on the panel's last line. If it is old, close the other chats, or quit and reopen the Claude app.
 
 ## Files
 
@@ -78,7 +80,8 @@ Keep these in mind. Each one cost time.
 - A `claude://` Link in a pane does nothing. A whole chat line opens through a Client (`chatline.tsx`). The Client posts the link to the mod. The mod opens it only if that chat is in its current list.
 - A desktop Client draws only Box, Text, Button, Input and Select. Never put a Link or an Svg in a Client. Refusals show in `~/Library/Logs/Claude/claude.ai-web.log` ("Client instance unmounted"). The `ui.fault` hook writes them to the debug log.
 - A Client sits on its own layer above an absolute Box. While a floating card is open, the lines are drawn as plain text.
-- A drawn Svg also sits above an absolute Box. While a card is open, every other gear is the ⚙ letter and every dot is the "⦁" letter. Only the open card's own gear stays drawn. `tests/cards.test.tsx` checks this for each card.
+- A drawn Svg also sits above an absolute Box. While a card is open, every dot is the "●" letter, and a title gear (after My groups, Cowork Projects or a group's name) is left out unless its card is the open one. Chat-line gears stay drawn: they sit in cells 0-1, and every card starts at cell 3 (`POPUP_LEFT`). Do not draw a ⚙ letter in a gear's 2-cell box: it is cut in half. `tests/cards.test.tsx` checks this for each card.
+- A chat's card opens upward when it is taller than the rows under its line (`cardRows`, `ROWS_UNDER_LIST`). Else the end of the panel cuts it off.
 - A Select always shows and ticks one of its lines as its face. This is confusing. For this reason the panel uses the floating ⚙ cards.
 - A Box with `overflowX="scroll"` forces a wide monospace font. Never use it.
 - Esc reaches the panel only as a close of the whole pane. Esc closes a whole card, not one step.
