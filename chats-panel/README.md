@@ -52,6 +52,8 @@ claude plugin validate chats-panel --profile directory
 
 `tsc -p chats-panel` uses the engine types. The engine writes them to `chats-panel/.claude-plugin/types` once the mod has loaded. Git ignores this folder.
 
+On 2026-11-23 this folder was missing, also after `/reload-plugins` from this Google Drive folder. A headless `claude -p --plugin-dir` load needs a valid login. Without the folder, tsc gives only "cannot find module 'claude-code'" errors and the errors that come from them. Then say that tsc did not run. Do not count it as a pass. Without the types file, tsc also has no `noEmit` setting, so it writes `.js` files next to the sources. Delete them after the run (see "Two traps" below), or run `tsc -p chats-panel --noEmit`.
+
 ## Develop
 
 Load the mod from the folder:
@@ -98,6 +100,7 @@ Keep these in mind. Each one cost time.
 - Runs of scheduled tasks have no project. They end with "| Scheduled".
 - The Code chat on screen comes from `LocalSessions.setFocusedSession` in `main.log`.
 - Each list shows at most 12 chats. The constant is `TAB_COUNT` in both readers.
+- One Cowork task can come in two forms. The sidebar list can hold a short form with no `workspace_session_id`, so it looks like a plain chat. A project page holds the full form. The reader keeps the task id for the chat's uuid, and merges the two into one Cowork line. `tests/dedupe.test.tsx` checks this.
 
 ## Shared files
 

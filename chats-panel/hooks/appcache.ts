@@ -545,7 +545,7 @@ type Extracted = Omit<AppCache, 'savedAt'> & { mem: Memory }
 
 // mem: project names and stars seen before. The app's newer copy has no project list, so names
 // seen once are kept.
-function extract(queries: Obj[], recs: Map<string, Obj>, mem: Memory | undefined): Extracted | undefined {
+export function extract(queries: Obj[], recs: Map<string, Obj>, mem: Memory | undefined): Extracted | undefined {
   const hashOf = (q: Obj) => str(q.queryHash) ?? ''
   const dataOf = (q: Obj) => (isObj(q.state) ? q.state.data : undefined)
   const updatedOf = (q: Obj) => (isObj(q.state) ? (num(q.state.dataUpdatedAt) ?? 0) : 0)
@@ -607,12 +607,31 @@ function extract(queries: Obj[], recs: Map<string, Obj>, mem: Memory | undefined
   }
 
   const chatIds = new Map<string, string>() // chat uuid -> row id, for agentsRunning below
+  // One Cowork task can come in two forms. The sidebar list can hold a short form with no
+  // workspace_session_id (it looks like a plain chat, keyed by its uuid). A project page holds
+  // the full form (keyed by the task id). The task id, once seen, is kept for the uuid, and a
+  // plain-chat row made before is merged into the task's row. So each chat shows once.
+  // Same in chats.py.
+  const taskOf = new Map<string, string>() // chat uuid -> Cowork task id
   const fromConversation = (c: Obj) => {
     if (c.is_archived === true || c.is_temporary === true) return
     const uuid = str(c.uuid)
     if (!uuid) return
-    const ws = str(c.workspace_session_id)
+    const ws = str(c.workspace_session_id) ?? taskOf.get(uuid)
     const pu = str(c.project_uuid)
+    if (ws !== undefined && ws !== uuid) {
+      taskOf.set(uuid, ws)
+      const early = byId.get(uuid)
+      if (early !== undefined) {
+        byId.delete(uuid)
+        const at = fetchedAt.get(uuid) ?? -1
+        fetchedAt.delete(uuid)
+        const keep = currentFetchedAt
+        currentFetchedAt = at
+        put({ ...early, id: ws, kind: 'cowork', link: `claude://claude.ai/cowork/${ws}` })
+        currentFetchedAt = keep
+      }
+    }
     chatIds.set(uuid, ws ?? uuid)
     const pid = isObj(c.project) ? str(c.project.uuid) : undefined
     const pname = isObj(c.project) ? str(c.project.name)?.trim() : undefined

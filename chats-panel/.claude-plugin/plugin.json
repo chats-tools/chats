@@ -1,6 +1,6 @@
 {
   "name": "chats-panel",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "A Chats panel for the Claude desktop app's Code tab: working and recent chats by Cowork project and Code tab, click to open, your own groups and marks (shared with the ChatsBar menu bar app), and usage bars. macOS only.",
   "license": "MIT",
   "keywords": ["chats", "cowork", "usage", "panel", "macos"],

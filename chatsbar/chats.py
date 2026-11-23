@@ -544,7 +544,22 @@ def extract(queries, recs, mem):
     def from_conv(c):
         if c.get('is_archived') is True or c.get('is_temporary') is True or not c.get('uuid'):
             return
-        ws = c.get('workspace_session_id')
+        # One Cowork task can come in two forms. The sidebar list can hold a short form with
+        # no workspace_session_id (it looks like a plain chat, keyed by its uuid). A project
+        # page holds the full form (keyed by the task id). The task id, once seen, is kept for
+        # the uuid, and a plain-chat row made before is merged into the task's row. So each
+        # chat shows once. Same in /chats (appcache.ts).
+        ws = c.get('workspace_session_id') or task_of.get(c['uuid'])
+        if ws and ws != c['uuid']:
+            task_of[c['uuid']] = ws
+            early = by_id.pop(c['uuid'], None)
+            if early is not None:
+                at = fetched.pop(c['uuid'], -1)
+                keep = cur[0]
+                cur[0] = at
+                early.update({'id': ws, 'kind': 'cowork', 'link': 'claude://claude.ai/cowork/%s' % ws})
+                put(early)
+                cur[0] = keep
         p = c.get('project')
         if isinstance(p, dict) and p.get('uuid') and p.get('name'):
             names[p['uuid']] = p['name'].strip()  # learn it for later copies
@@ -574,6 +589,7 @@ def extract(queries, recs, mem):
              'scheduled': bool(s.get('scheduledTaskId'))})
 
     chat_ids = {}  # chat uuid -> row id, for agents_running below
+    task_of = {}  # chat uuid -> Cowork task id (see from_conv)
     for q in qs:
         h = str(q.get('queryHash', ''))
         d = (q.get('state') or {}).get('data')
