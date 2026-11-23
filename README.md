@@ -101,7 +101,8 @@ There is no ready-made app. You build it on your Mac. This takes about one minut
 - Type `/chats` in a Claude Code chat. The panel opens in the sidebar.
 - Open it in its own window with "Open in / New window" (recommended), or keep it in the sidebar.
 - Click a chat line to open that chat.
-- Click the gear icon (⚙) after a chat to open a small card. The card lets you move the chat to a group, make a new group, and set **Bold** or **Important** (orange).
+- Click the gear icon (⚙) after a chat to open a small card. The card lets you put the chat in groups, make a new group, and set **Bold** or **Important** (orange).
+- A chat can be in more than one group. The card shows a ✓ on each group the chat is in. Click a group to put the chat in it or take it out. Its other groups stay. "No group" takes it out of all groups.
 - The gear after "My groups" opens Edit groups. There you can rename or delete a group.
 - Delete asks "are you sure". After a delete, an Undo button shows next to "My groups" for 20 seconds.
 - The gear after "Cowork Projects" shows or hides projects.
@@ -116,10 +117,10 @@ There is no ready-made app. You build it on your Mac. This takes about one minut
 
 - The icon shows ▶N when N chats work.
 - Click the icon to open the window.
-- Drag a chat onto a group to add it. Drag it onto "+ New group" to make a new group.
+- Drag a chat onto a group to add it. It stays in its other groups. Drag it onto "+ New group" to make a new group.
 - Double-click a group to rename it.
 - Right-click a group to rename it or delete it. Delete asks first. Undo shows for 20 seconds.
-- Right-click a chat to set its groups and marks.
+- Right-click a chat to set its groups and marks. Groups shows a ✓ on each group the chat is in. A click puts it in or takes it out.
 - "Projects…" lets you choose which projects to show.
 - Refresh reads the data again. Quit closes the app.
 - Drag the resize handle to change the window size.
@@ -143,7 +144,7 @@ Folder: `~/Library/Application Support/ChatsBar/`
 | File | What it holds |
 | --- | --- |
 | `marks.json` | `{"<chat id lower case>": {"bold": true, "important": true}}` |
-| `groups.json` | `{"groups": [{"id": "g-<ms>", "name": "...", "chats": ["<chat id>"]}]}` |
+| `groups.json` | `{"groups": [{"id": "g-<ms>", "name": "...", "chats": ["<chat id>"]}]}`. One chat id can be in the `chats` of more than one group. |
 | `settings.json` | `{"hiddenProjects": [...], "projectOrder": [...], "projectIds": {...}}` |
 
 About `settings.json`:
@@ -200,7 +201,7 @@ Read this list before you install.
   - A finished task can show working for up to 5 minutes.
   - An agent step that never ends shows working for up to 6 hours.
 - **Code chats.** The state can be up to 20 seconds late.
-- **The panel cannot run inside Cowork.** Cowork runs in a VM.
+- **The panel cannot run inside Cowork.** Cowork runs in a VM. But you can open `/chats` in a Claude Code chat and float it beside Cowork: right-click the chat, then Open in / New window.
 - **Not in the Anthropic plugin directory.** You get it from GitHub only.
 
 ## Windows

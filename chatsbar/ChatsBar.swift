@@ -108,17 +108,30 @@ enum Store {
     writeJSON(groupsPath, o)
   }
 
-  /// Puts the chat in the group (nil: in no group). A chat is in one group at most.
-  static func move(_ key: String, to gid: String?) {
+  // A chat can be in more than one group. Each of these changes one group and keeps the chat
+  // in its other groups. Same rules in /chats (chats-panel/hooks/groups.ts).
+  private static func change(_ fn: (String?, [String]) -> [String]) {
     let (o, gs) = readGroups()
-    let out = gs.map { g -> [String: Any] in
+    saveGroups(o, gs.map { g in
       var g = g
-      var ks = ((g["chats"] as? [String]) ?? []).filter { $0 != key }
-      if let gid = gid, g["id"] as? String == gid { ks.insert(key, at: 0) }
-      g["chats"] = ks
+      g["chats"] = fn(g["id"] as? String, (g["chats"] as? [String]) ?? [])
       return g
-    }
-    saveGroups(o, out)
+    })
+  }
+
+  /// Puts the chat at the top of the group. Its other groups stay.
+  static func add(_ key: String, to gid: String) {
+    change { id, ks in id == gid && !ks.contains(key) ? [key] + ks : ks }
+  }
+
+  /// Takes the chat out of this group only.
+  static func remove(_ key: String, from gid: String) {
+    change { id, ks in id == gid ? ks.filter { $0 != key } : ks }
+  }
+
+  /// Takes the chat out of every group.
+  static func removeAll(_ key: String) {
+    change { _, ks in ks.filter { $0 != key } }
   }
 
   /// A new group, with one chat in it when a chat was dropped on "New group". Returns its id.
@@ -126,7 +139,7 @@ enum Store {
     let id = "g-\(Int(Date().timeIntervalSince1970 * 1000))"
     let (o, gs) = readGroups()
     saveGroups(o, gs + [["id": id, "name": "New group", "chats": [String]()]])
-    if let key = key { move(key, to: id) }
+    if let key = key { add(key, to: id) }
     return id
   }
 
@@ -212,14 +225,23 @@ final class Model: ObservableObject {
 
   var groups: [ChatGroup] { snap?.groups ?? [] }
 
-  func groupOf(_ key: String) -> ChatGroup? {
-    groups.first { g in g.items.contains { $0.chatKey == key } }
+  /// Every group the chat is in. A chat can be in more than one group.
+  func groupsOf(_ key: String) -> [ChatGroup] {
+    groups.filter { g in g.items.contains { $0.chatKey == key } }
   }
 
   /// Every write: save, then read again at once and tell the /chats panels.
   func changed() { app?.refreshNow() }
 
-  func move(_ key: String, to gid: String?) { Store.move(key, to: gid); changed() }
+  /// In the group: out. Not in it: in. Its other groups stay.
+  func toggle(_ key: String, in gid: String) {
+    if groupsOf(key).contains(where: { $0.id == gid }) { Store.remove(key, from: gid) } else { Store.add(key, to: gid) }
+    changed()
+  }
+
+  func remove(_ key: String, from gid: String) { Store.remove(key, from: gid); changed() }
+
+  func removeAll(_ key: String) { Store.removeAll(key); changed() }
 
   func newGroup(with key: String?) {
     let id = Store.newGroup(with: key)
@@ -293,11 +315,15 @@ final class Model: ObservableObject {
 struct ChatRow: View {
   let c: Item
   @ObservedObject var model: Model
+  /// The group box this line is shown in (nil: a list, not a group).
+  var group: ChatGroup? = nil
 
   var body: some View {
-    let isHover = model.hover == c.id
+    // One chat can show in several groups: the hover key holds the group too.
+    let hoverKey = (group?.id ?? "") + "|" + c.id
+    let isHover = model.hover == hoverKey
     let saved = model.marks[c.chatKey] ?? [:]
-    let inGroup = model.groupOf(c.chatKey)
+    let inGroups = model.groupsOf(c.chatKey)
     Text(c.title)
       .fontWeight(c.bold == true ? .bold : .regular)
       .lineLimit(1)
@@ -310,22 +336,28 @@ struct ChatRow: View {
       .padding(.horizontal, 6)
       .background(RoundedRectangle(cornerRadius: 5).fill(isHover ? Color.accentColor.opacity(0.18) : Color.clear))
       .contentShape(Rectangle())
-      .onHover { on in if on { model.hover = c.id } else if model.hover == c.id { model.hover = nil } }
+      .onHover { on in if on { model.hover = hoverKey } else if model.hover == hoverKey { model.hover = nil } }
       .onTapGesture { model.app?.openLink(c.link) }
       .help("Click to open. Drag onto a group. Right-click for more.")
       .draggable(c.chatKey) {
         Text(c.title).lineLimit(1).padding(6).background(.regularMaterial).cornerRadius(6)
       }
       .contextMenu {
-        Menu("Move to group") {
+        // A chat can be in more than one group: ✓ on each group it is in. A click puts it in
+        // that group or takes it out. Its other groups stay. Same as the /chats chat card.
+        Menu("Groups") {
           ForEach(model.groups) { g in
-            Button(g.id == inGroup?.id ? "✓ \(g.name)" : g.name) { model.move(c.chatKey, to: g.id) }
+            let isIn = inGroups.contains { $0.id == g.id }
+            Button(isIn ? "✓ \(g.name)" : g.name) { model.toggle(c.chatKey, in: g.id) }
           }
           if !model.groups.isEmpty { Divider() }
           Button("New group…") { model.newGroup(with: c.chatKey) }
         }
-        if let g = inGroup {
-          Button("Take out of \"\(g.name)\"") { model.move(c.chatKey, to: nil) }
+        if let g = group {
+          Button("Take out of \"\(g.name)\"") { model.remove(c.chatKey, from: g.id) }
+        }
+        if inGroups.count > 1 || (group == nil && !inGroups.isEmpty) {
+          Button("Take out of all groups") { model.removeAll(c.chatKey) }
         }
         Divider()
         Button(saved["bold"] == true ? "✓ Bold" : "Bold") { model.toggleMark(c.chatKey, "bold") }
@@ -384,11 +416,12 @@ struct GroupBox: View {
         if g.items.isEmpty {
           Text("Drag chats here").foregroundColor(.secondary).font(.caption).padding(.leading, 26).padding(.vertical, 3)
         }
-        ForEach(g.items) { c in ChatRow(c: c, model: model).padding(.leading, 18) }
+        ForEach(g.items) { c in ChatRow(c: c, model: model, group: g).padding(.leading, 18) }
       }
     }
+    // A drop puts the chat in this group too. It stays in its other groups.
     .dropDestination(for: String.self) { keys, _ in
-      for k in keys { Store.move(k, to: g.id) }
+      for k in keys { Store.add(k, to: g.id) }
       model.collapsed.remove(g.id)
       model.changed()
       return true

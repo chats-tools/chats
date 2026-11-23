@@ -21,6 +21,15 @@ For install and use, read the [main README](../README.md). This file is for peop
 
 The build also copies `../chats-panel/demo/demo.json` into the app. Build from the full repo folder.
 
+## Groups
+
+A chat can be in more than one group.
+
+- Right-click a chat, then Groups. A ✓ shows on each group the chat is in. A click puts it in that group or takes it out. Its other groups stay.
+- A drop on a group adds the chat to it. It stays in its other groups.
+- In a group box, right-click a chat, then "Take out of" takes it out of that group only. "Take out of all groups" takes it out of all of them.
+- `groups.json` keeps its shape. `/chats` uses the same rules (`../chats-panel/hooks/groups.ts`).
+
 ## Build
 
 You need the Command Line Tools only. You do not need Xcode.

@@ -20,7 +20,7 @@ For use, read the [main README](../README.md). This file is for people who chang
 - **A context bar** for the Code chat on screen ("Context · <title>"). It has colored parts for the chat that opened the panel. It is hidden when a Cowork chat is on screen.
 - **Working now, My groups, Recent chats** (Recent, No project, Code) and **Cowork Projects**.
 - **One line for each chat.** A state dot (green is working, gray is idle with its time). The title. Then "| project | Cowork", or "| Code". Runs of scheduled tasks end with "| Scheduled". A click on the line opens the chat. The row under the pointer turns gray.
-- **A gear (⚙)** after each chat, after "My groups", after "Cowork Projects" and after a picked group. It opens a floating card of plain buttons: move to a group, new group, Bold, Important, Edit groups (Rename and Delete), and show or hide projects.
+- **A gear (⚙)** after each chat, after "My groups", after "Cowork Projects" and after a picked group. It opens a floating card of plain buttons: the groups of the chat (a ✓ on each group it is in; a click puts it in or takes it out), new group, Bold, Important, Edit groups (Rename and Delete), and show or hide projects.
 - **Delete** asks "are you sure". It has a 20-second Undo next to "My groups". Esc closes a card.
 - **Bold and Important** (orange) marks. A chat title can also start with `***` or `!` to set them.
 - **A legend** at the bottom, then the version of the code that draws the panel ("/chats v0.12.4"), read from `.claude-plugin/plugin.json`.
@@ -107,6 +107,9 @@ Keep these in mind. Each one cost time.
 
 ## Shared files
 
+A chat can be in more than one group. `hooks/groups.ts` (add, remove, remove from all, toggle) and `Store.add`, `Store.remove`, `Store.removeAll` in `../chatsbar/ChatsBar.swift` keep the same rules. A change in one group never changes the other groups. `tests/groups.test.tsx` checks this.
+
+
 The panel and ChatsBar share `marks.json`, `groups.json` and `settings.json` in `~/Library/Application Support/ChatsBar/`. They also share `~/Library/Caches/ChatsBar/refresh-signal`. The [main README](../README.md) describes the formats.
 
 ## Release steps
@@ -114,9 +117,10 @@ The panel and ChatsBar share `marks.json`, `groups.json` and `settings.json` in 
 1. Make the change in this repo, never in a private copy.
 2. Bump `version` in `.claude-plugin/plugin.json`.
 3. Run the checks: `claude plugin test chats-panel`, tsc, `claude plugin validate chats-panel --profile directory`, and `zsh scripts/privacy-check.sh`.
-4. Test on your Mac: `/reload-plugins`, then `/chats`. For a ChatsBar change: `zsh build.sh` in `chatsbar/`, then quit and reopen ChatsBar.
+4. Test on your Mac with only one Code chat open: `/chats`. The last line of the panel must show the new version. If it does not, type `/reload-plugins`. For a ChatsBar change: `zsh build.sh` in `chatsbar/`, then quit and reopen ChatsBar.
 5. Commit and `git push`. The pre-push hook runs the privacy check again and blocks the push on any hit.
 
-Two traps:
+Three traps:
+- Each open Code chat runs its own copy of the mod, read from this folder when the chat starts. `/reload-plugins` updates only the chat where you type it. Another open chat can draw the panel with old code. So test with one chat open, and check the version on the panel's last line.
 - Never leave compiled `.js` files next to the `.ts` and `.tsx` sources. An import such as `./appcache` can then load an old `.js` copy, not the real code. `.gitignore` ignores them, but delete them too.
 - Screenshots only from demo mode, cropped to the panel or the ChatsBar window, so no real chat shows. `scripts/make-demo-gif.swift` turns them into `docs/images/demo.gif`.

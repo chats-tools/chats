@@ -6,6 +6,7 @@ import { readAppCache } from './appcache'
 import type { AppCache } from './appcache'
 import { DEMO_TOAST, buildDemoView, dataDir, emptyDemo, isDemoOn, loadDemo, seedDemoFiles } from './demo'
 import type { Demo } from './demo'
+import { addChat, removeFromAll, toggleChat } from './groups'
 
 // chats-panel
 //   "Chats" pane (/chats): one tab per Cowork project, plus Recent, No project and Code.
@@ -433,7 +434,7 @@ async function toggleMark($: EngineInterface, link: string, which: 'bold' | 'imp
 // Subjects you name, like Chrome tab groups, for Code and Cowork chats together. One file for
 // this panel and ChatsBar (which has drag and drop; the "Organize groups" button opens it):
 //   {"groups": [{"id": "g-<ms>", "name": "Big ideas", "chats": ["<chat key>", ...]}]}
-// The chat key is the same as for marks. A chat is in one group at most. Groups show newest first:
+// The chat key is the same as for marks. A chat can be in more than one group (see groups.ts). Groups show newest first:
 // by the last activity of their newest chat. Same rules as ChatsBar's chats.py.
 function groupsPath($: EngineInterface) {
   return dataFile($, 'groups.json')
@@ -510,18 +511,13 @@ async function undoDeleteGroup($: EngineInterface) {
   $.ui.toast(`Group "${u.group.name}" is back`)
 }
 
-const moveChat = (key: string, gid: string | undefined) => (gs: ChatGroupDef[]) =>
-  gs.map(g => {
-    const ks = g.chats.filter(k => k !== key)
-    return { ...g, chats: g.id === gid ? [key, ...ks] : ks }
-  })
-
 async function newGroup($: EngineInterface, name: string, key: string) {
   const n = name.trim()
   if (n === '') return
   const id = `g-${await $.clock.now()}`
-  // The list stays where it is, so more chats can be put in the new group.
-  await changeGroups($, gs => moveChat(key, id)([...gs, { id, name: n, chats: [] }]))
+  // The list stays where it is, so more chats can be put in the new group. The chat stays in
+  // its other groups too.
+  await changeGroups($, gs => addChat(key, id)([...gs, { id, name: n, chats: [] }]))
 }
 
 // ---------- project setup ----------
@@ -924,7 +920,16 @@ export const register: Register = on => {
         return { ...g, items, at: items[0]?.lastActivityAt ?? 0, i }
       })
       .sort((a, b) => b.at - a.at || a.i - b.i)
-    const groupOf = (key: string) => ordered.find(g => g.chats.includes(key))
+    // A chat can be in more than one group. groupsOf: all of them, newest group first.
+    const groupsOf = (key: string) => ordered.filter(g => g.chats.includes(key))
+    // The one group that "Rename" and "Delete" in a chat's card act on: the picked group, when
+    // the chat is in it; else its only group. With two groups or more and none picked: none
+    // (use "Edit groups" next to "My groups").
+    const ownOf = (key: string) => {
+      const in_ = groupsOf(key)
+      const picked = in_.find(g => `group:${g.id}` === selected)
+      return picked ?? (in_.length === 1 ? in_[0] : undefined)
+    }
 
     const fixedTabs = ['Recent', 'No project', 'Code']
     const tabs = [...fixedTabs, ...projects, ...ordered.map(g => `group:${g.id}`)]
@@ -989,7 +994,8 @@ export const register: Register = on => {
     const renaming = openKey.startsWith('rename|mygroups|') ? ordered.find(g => `rename|mygroups|${g.id}` === openKey) : undefined
     const act = async (c: Chat, slot: string, v: string) => {
       const key = keyOf(c)
-      const inGroup = groupOf(key)
+      const inGroup = ownOf(key)
+      const all = groupsOf(key)
       if (v === 'bold' || v === 'important') await toggleMark($, c.link, v)
       else if (v === 'new') {
         await update($, moving, () => `new|${slot}|${key}`)
@@ -1005,17 +1011,20 @@ export const register: Register = on => {
         // Ask first ("are you sure"); Undo stays for UNDO_MS after the delete.
         await update($, cardStep, () => `confirm|${inGroup.id}`)
       }
-      else if ((v === 'out' || v === 'nogroup') && inGroup !== undefined) {
-        await changeGroups($, moveChat(key, undefined))
+      // "No group": out of every group.
+      else if ((v === 'out' || v === 'nogroup') && all.length > 0) {
+        await changeGroups($, removeFromAll(key))
         await closeOpen()
-        $.ui.toast(`Taken out of "${inGroup.name}"`)
-      } else if (v.startsWith('g:')) {
+        $.ui.toast(all.length === 1 ? `Taken out of "${all[0]?.name}"` : `Taken out of ${all.length} groups`)
+      }
+      // A group: a click puts the chat in it, or takes it out. Its other groups stay.
+      else if (v.startsWith('g:')) {
         const g = ordered.find(x => `g:${x.id}` === v)
-        if (g !== undefined && g.id !== inGroup?.id) {
-          await changeGroups($, moveChat(key, g.id))
-          $.ui.toast(`Put in "${g.name}"`)
+        if (g !== undefined) {
+          const isIn = g.chats.includes(key)
+          await changeGroups($, toggleChat(key, g.id))
+          $.ui.toast(isIn ? `Taken out of "${g.name}"` : `Put in "${g.name}"`)
         }
-        await closeOpen()
       }
     }
     const menu = (c: Chat, slot: string) => gear(`menu|${slot}|${keyOf(c)}`, `more-${slot}-${c.id}`)
@@ -1036,7 +1045,7 @@ export const register: Register = on => {
     )
     const under = (c: Chat, slot: string) => {
       const key = keyOf(c)
-      const own = groupOf(key)
+      const own = ownOf(key)
       if (openKey === `grename|${slot}|${key}` && own !== undefined) {
         return (
           <Box key={`grenamebox-${slot}-${c.id}`} flexDirection="column" marginLeft={4}>
@@ -1124,28 +1133,30 @@ export const register: Register = on => {
         <Button key={`${k}-del`} label="Delete" variant="primary" onPress={() => confirmDelete(g.id, close)} />
       </Box>,
     ]
-    // The chat's pop-up: its place ("No group" or a group, ticked), a new group, rename or delete
-    // its group, Bold, Important. The same jobs as the drop-down had.
     // The rows of a chat's card: 2 headings, "No group", each group, "New group", Rename and
-    // Delete (when in a group), Bold, Important, Close, and the 2 border rows.
-    const cardRows = (c: Chat) => ordered.length + 9 + (groupOf(keyOf(c)) !== undefined ? 2 : 0)
+    // Delete (when it has one group to act on), Bold, Important, Close, and the 2 border rows.
+    const cardRows = (c: Chat) => ordered.length + 9 + (ownOf(keyOf(c)) !== undefined ? 2 : 0)
+    // The chat's pop-up: its groups ("No group", or each group it is in, ticked; a click on a
+    // group puts it in or takes it out), a new group, rename or delete its group, Bold, Important.
     const chatPopup = (c: Chat, slot: string, up: boolean) => {
       const key = keyOf(c)
       if (openKey !== `menu|${slot}|${key}`) return null
-      const inGroup = groupOf(key)
+      const inGroup = ownOf(key)
+      const all = groupsOf(key)
       const saved = marked[key] ?? {}
-      // A job, then the pop-up closes. "New group" and "Rename" open their name field instead.
+      // A job, then the pop-up closes (a click on a group too). "New group" and "Rename" open
+      // their name field instead.
       const pick = async (v: string) => {
         await act(c, slot, v)
         if (v !== 'new' && v !== 'grename' && v !== 'gdelete') await closeOpen()
       }
       const id = `${slot}-${c.id}`
-      const own = inGroup !== undefined ? ordered.find(g => g.id === inGroup.id) : undefined
+      const own = inGroup
       if (own !== undefined && step === `confirm|${own.id}`) return popup(`menubox-${id}`, up, confirmBody(own, `pmc-${id}`, true))
       return popup(`menubox-${id}`, up, [
-        heading(`pm-h-${id}`, 'Group'),
-        item(`pm-none-${id}`, inGroup === undefined, 'No group', () => pick('out')),
-        ...ordered.map(g => item(`pm-g-${id}-${g.id}`, inGroup?.id === g.id, isRtl(g.name) ? rtl(g.name) : g.name, () => pick(`g:${g.id}`))),
+        heading(`pm-h-${id}`, 'Groups'),
+        item(`pm-none-${id}`, all.length === 0, 'No group', () => pick('out')),
+        ...ordered.map(g => item(`pm-g-${id}-${g.id}`, g.chats.includes(key), isRtl(g.name) ? rtl(g.name) : g.name, () => pick(`g:${g.id}`))),
         item(`pm-new-${id}`, false, '＋ New group…', () => pick('new')),
         ...(inGroup !== undefined
           ? [

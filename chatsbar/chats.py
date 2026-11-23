@@ -1035,8 +1035,8 @@ def item(c, now_ms, show_where):
 # Your groups: subjects you name, like Chrome tab groups, for Code and Cowork chats together.
 # One file for ChatsBar (drag window) and every /chats panel:
 #   {"groups": [{"id": "g-1763820000000", "name": "This week", "chats": ["<chat key>", ...]}]}
-# A chat key is the same as for marks. A chat is in one group at most. Groups are shown newest
-# first: by the last activity of their newest chat; groups with no chat in view go last.
+# A chat key is the same as for marks. A chat can be in more than one group; it shows in each
+# of them. Groups are shown newest first: by the last activity of their newest chat; groups with no chat in view go last.
 GROUPS = os.path.join(DATA_DIR, 'groups.json')
 
 
