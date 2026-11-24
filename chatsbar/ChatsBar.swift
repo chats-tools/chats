@@ -188,8 +188,9 @@ final class Model: ObservableObject {
   @Published var tab: String = Model.savedTab() {
     didSet { if Model.savedTabs.contains(tab) { UserDefaults.standard.set(tab, forKey: "tab") } }
   }
-  /// Which groups are folded. Kept in memory only: group ids are not written to disk.
-  @Published var collapsed: Set<String> = []
+  /// Which groups are open. All groups are closed each time the window opens; a click opens one.
+  /// Kept in memory only: group ids are not written to disk.
+  @Published var opened: Set<String> = []
 
   static func savedTab() -> String {
     let d = UserDefaults.standard
@@ -245,7 +246,7 @@ final class Model: ObservableObject {
 
   func newGroup(with key: String?) {
     let id = Store.newGroup(with: key)
-    collapsed.remove(id)
+    opened.insert(id)
     startRename(id, "New group")
     changed()
   }
@@ -298,7 +299,7 @@ final class Model: ObservableObject {
     guard let u = undo else { return }
     undo = nil
     Store.restore(u.group, at: u.index)
-    collapsed.remove(u.group["id"] as? String ?? "")
+    opened.insert(u.group["id"] as? String ?? "")
     changed()
   }
 
@@ -383,7 +384,7 @@ struct GroupBox: View {
 
   var body: some View {
     let isTarget = model.target == g.id
-    let isOpen = !model.collapsed.contains(g.id)
+    let isOpen = model.opened.contains(g.id)
     VStack(alignment: .leading, spacing: 1) {
       HStack(spacing: 6) {
         Image(systemName: isOpen ? "chevron.down" : "chevron.right")
@@ -406,7 +407,7 @@ struct GroupBox: View {
       // A click folds or unfolds the group. A double-click renames it.
       .gesture(TapGesture(count: 2).onEnded { model.startRename(g.id, g.name) }
         .exclusively(before: TapGesture().onEnded {
-          if model.collapsed.contains(g.id) { model.collapsed.remove(g.id) } else { model.collapsed.insert(g.id) }
+          if model.opened.contains(g.id) { model.opened.remove(g.id) } else { model.opened.insert(g.id) }
         }))
       .contextMenu {
         Button("Rename…") { model.startRename(g.id, g.name) }
@@ -422,7 +423,7 @@ struct GroupBox: View {
     // A drop puts the chat in this group too. It stays in its other groups.
     .dropDestination(for: String.self) { keys, _ in
       for k in keys { Store.add(k, to: g.id) }
-      model.collapsed.remove(g.id)
+      model.opened.insert(g.id)
       model.changed()
       return true
     } isTargeted: { on in if on { model.target = g.id } else if model.target == g.id { model.target = nil } }
@@ -730,7 +731,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     popover.contentSize = NSSize(width: model.width, height: model.height)
     refresh()
     NSApp.activate(ignoringOtherApps: true)
-    if !popover.isShown { popover.show(relativeTo: b.bounds, of: b, preferredEdge: .minY) }
+    if !popover.isShown {
+      // Each open starts with all groups closed: less to read. A click opens a group.
+      model.opened = []
+      popover.show(relativeTo: b.bounds, of: b, preferredEdge: .minY)
+    }
     popover.contentViewController?.view.window?.makeKey()
   }
 

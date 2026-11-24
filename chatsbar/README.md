@@ -27,6 +27,7 @@ A chat can be in more than one group.
 
 - Right-click a chat, then Groups. A ✓ shows on each group the chat is in. A click puts it in that group or takes it out. Its other groups stay.
 - A drop on a group adds the chat to it. It stays in its other groups.
+- Each time the window opens, all groups are closed (`Model.opened`, reset in `showPopover`). A click opens or closes a group. A drop on a group opens it.
 - In a group box, right-click a chat, then "Take out of" takes it out of that group only. "Take out of all groups" takes it out of all of them.
 - `groups.json` keeps its shape. `/chats` uses the same rules (`../chats-panel/hooks/groups.ts`).
 

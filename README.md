@@ -118,6 +118,7 @@ There is no ready-made app. You build it on your Mac. This takes about one minut
 - The icon shows ▶N when N chats work.
 - Click the icon to open the window.
 - Drag a chat onto a group to add it. It stays in its other groups. Drag it onto "+ New group" to make a new group.
+- Each time the window opens, all groups are closed. Click a group to open or close it.
 - Double-click a group to rename it.
 - Right-click a group to rename it or delete it. Delete asks first. Undo shows for 20 seconds.
 - Right-click a chat to set its groups and marks. Groups shows a ✓ on each group the chat is in. A click puts it in or takes it out.
