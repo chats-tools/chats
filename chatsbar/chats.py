@@ -15,6 +15,8 @@ Sources (all local, read only):
   - Code tab chats: ~/Library/Application Support/Claude/claude-code-sessions/*/*/local_*.json
   - Cowork task with agents still running: its saved transcript has an open Task/Agent step
     (in any assistant message less than 6 h old).
+  - Code chat time: the newest user or assistant line of its transcript (not the app's
+    lastActivityAt, which also moves with no work); lastActivityAt only with no transcript.
   - Code chat running sign: its transcript (~/.claude/projects/*/<cli id>.jsonl) has a
     timestamped line after the chat's last turn edge, and recently.
 No network, no tokens.
@@ -866,25 +868,63 @@ def apply_vm_steps(rows, now_ms):
 
 # ---------- Code tab chats ----------
 
-def last_stamp_ms(path, tail=262144):
-    """Time (ms) of the newest transcript line that has a 'timestamp', or 0."""
+def stamp_ms(stamp):
+    """A transcript 'timestamp' ("2026-11-24T11:39:04.421Z") as ms, or 0."""
+    try:
+        dt = datetime.datetime.strptime(stamp[:19], '%Y-%m-%dT%H:%M:%S')
+        ms = int(stamp[20:23]) if stamp[19:20] == '.' else 0
+        return dt.replace(tzinfo=datetime.timezone.utc).timestamp() * 1000 + ms
+    except (ValueError, TypeError, AttributeError):
+        return 0
+
+
+def tail_lines(path, tail):
+    """The lines of the last `tail` bytes of a file, and the file size; ([], 0) on an error."""
     try:
         with open(path, 'rb') as fh:
             fh.seek(0, 2)
-            fh.seek(max(0, fh.tell() - tail))
-            lines = fh.read().split(b'\n')
+            size = fh.tell()
+            fh.seek(max(0, size - tail))
+            return fh.read().split(b'\n'), size
     except OSError:
-        return 0
-    for raw in reversed(lines):
+        return [], 0
+
+
+def last_stamp_ms(path, tail=262144):
+    """Time (ms) of the newest transcript line that has a 'timestamp', or 0."""
+    for raw in reversed(tail_lines(path, tail)[0]):
         if b'"timestamp"' not in raw:
             continue
         try:
-            stamp = json.loads(raw).get('timestamp')
-            dt = datetime.datetime.strptime(stamp[:19], '%Y-%m-%dT%H:%M:%S')
-            ms = int(stamp[20:23]) if stamp[19:20] == '.' else 0
-            return dt.replace(tzinfo=datetime.timezone.utc).timestamp() * 1000 + ms
-        except (ValueError, TypeError, AttributeError):
+            ms = stamp_ms(json.loads(raw).get('timestamp'))
+        except (ValueError, AttributeError):
             continue
+        if ms:
+            return ms
+    return 0
+
+
+def last_said_ms(path):
+    """Time (ms) of the newest user or assistant line of a transcript, or 0.
+
+    This is the chat's "time since last use". The app's lastActivityAt also moves when no work
+    happens (a timer, a reconnect), so a chat that was quiet for hours could show "22m".
+    Only the tail is read (these files can reach 50 MB); a longer tail if it has no message."""
+    for tail in (262144, 1048576, 4194304):
+        lines, size = tail_lines(path, tail)
+        for raw in reversed(lines):
+            if b'"type":"user"' not in raw and b'"type":"assistant"' not in raw:
+                continue
+            try:
+                d = json.loads(raw)
+            except ValueError:
+                continue  # a line cut at the read's start
+            if isinstance(d, dict) and d.get('type') in ('user', 'assistant'):
+                ms = stamp_ms(d.get('timestamp'))
+                if ms:
+                    return ms
+        if size <= tail:
+            break
     return 0
 
 
@@ -918,15 +958,17 @@ def code_row(f, d, transcripts, now_ms):
         return None
     if not isinstance(d['sessionId'], str):
         raise TypeError('bad session id')
+    # The first of the two ids that has a transcript (same order as the panel's lastSaid).
+    t = transcripts.get(d.get('lastAssistantCliSessionId') or '') or transcripts.get(d.get('cliSessionId') or '')
     try:
-        at = float(d.get('lastActivityAt') or 0) or os.path.getmtime(f) * 1000
+        # The last real message; the app's lastActivityAt only when there is no transcript.
+        at = (last_said_ms(t) if t else 0) or float(d.get('lastActivityAt') or 0) or os.path.getmtime(f) * 1000
     except OSError:
         return None
     edge = float(d.get('lastTurnEdgeAt') or 0)
     if not (math.isfinite(at) and math.isfinite(edge)):
         raise ValueError('bad time')
     working = False
-    t = transcripts.get(d.get('lastAssistantCliSessionId') or d.get('cliSessionId') or '')
     try:
         tm = os.path.getmtime(t) * 1000 if t else 0
     except OSError:

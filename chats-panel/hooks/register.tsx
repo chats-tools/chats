@@ -7,6 +7,7 @@ import type { AppCache } from './appcache'
 import { DEMO_TOAST, buildDemoView, dataDir, emptyDemo, isDemoOn, loadDemo, seedDemoFiles } from './demo'
 import type { Demo } from './demo'
 import { addChat, removeFromAll, toggleChat } from './groups'
+import { lastSaidIn, shownTime } from './said'
 
 // chats-panel
 //   "Chats" pane (/chats): one tab per Cowork project, plus Recent, No project and Code.
@@ -208,6 +209,8 @@ async function readMeta($: EngineInterface, path: string, mtimeMs: number) {
     meta = {
       sessionId: d.sessionId,
       cliSessionId: d.cliSessionId,
+      // The chat's newest transcript, when it differs from cliSessionId's.
+      lastAssistantCliSessionId: d.lastAssistantCliSessionId,
       // The chat's folder: names its transcript's folder.
       cwd: d.cwd,
       title: d.title,
@@ -291,6 +294,54 @@ async function codeChats($: EngineInterface): Promise<Chat[]> {
     isWorking: s.isRunning === true,
     link: `claude://claude.ai/epitaxy/${String(s.sessionId)}`,
   }))
+}
+
+// The time of each Code chat's last real message (hooks/said.ts), from its transcript
+// ~/.claude/projects/<cwd, each non-letter-or-digit as "-">/<cli id>.jsonl. Only the tail is
+// read, a longer tail if it has no message. Kept per file size, so an unchanged file is not read.
+const TRANSCRIPT_TAILS = [262_144, 1_048_576, 4_194_304]
+const saidCache = new Map<string, { size: number; at: number }>()
+
+async function lastSaid($: EngineInterface, home: string, m: Record<string, unknown>): Promise<number> {
+  if (typeof m.cwd !== 'string') return 0
+  const ids = [m.lastAssistantCliSessionId, m.cliSessionId].filter(
+    (x, i, a): x is string => typeof x === 'string' && /^[0-9a-f-]+$/i.test(x) && a.indexOf(x) === i,
+  )
+  for (const cli of ids) {
+    const path = `${home}/.claude/projects/${m.cwd.replace(/[^A-Za-z0-9]/g, '-')}/${cli}.jsonl`
+    if (!(await $.fs.exists(path))) continue
+    const size = (await $.fs.stat(path)).size
+    const hit = saidCache.get(path)
+    if (hit && hit.size === size) return hit.at
+    let at = 0
+    for (const len of TRANSCRIPT_TAILS) {
+      const off = Math.max(0, size - len)
+      at = lastSaidIn(await $.fs.read(path, { offset: off, length: size - off }))
+      if (at > 0 || off === 0) break
+    }
+    saidCache.set(path, { size, at })
+    return at
+  }
+  return 0
+}
+
+async function withLastSaid($: EngineInterface, appDir: string, chats: Chat[]): Promise<Chat[]> {
+  const home = (await $.env.get('HOME')) ?? ''
+  const metas = new Map<string, Record<string, unknown>>()
+  for (const dir of await orgDirs($, `${appDir}/claude-code-sessions`)) {
+    for (const f of await $.fs.list(dir)) {
+      if (f.kind !== 'file' || !/^local_.*\.json$/.test(f.name)) continue
+      const m = await readMeta($, `${dir}/${f.name}`, f.mtimeMs)
+      if (m && typeof m.sessionId === 'string') metas.set(m.sessionId, m)
+    }
+  }
+  return Promise.all(
+    chats.map(async c => {
+      const m = metas.get(c.id)
+      const said = m ? await lastSaid($, home, m).catch(() => 0) : 0
+      return { ...c, lastActivityAt: shownTime(said, c.lastActivityAt, c.isWorking) }
+    }),
+  )
 }
 
 // ---------- usage ----------
@@ -744,7 +795,9 @@ async function refresh($: EngineInterface) {
     await update($, projectOrder, v => (JSON.stringify(v) === JSON.stringify(order) ? v : order))
     await update($, marks, () => marked)
     await update($, groups, () => grouped)
-    const code = self ? [self, ...others.filter(c => c.id !== self.id)] : others
+    const listed = self ? [self, ...others.filter(c => c.id !== self.id)] : others
+    // The time of the last real message, not the app's lastActivityAt (hooks/said.ts).
+    const code = demo !== undefined ? listed : await withLastSaid($, appDir, listed).catch(() => listed)
     const cowork = cache ? cache.chats : await coworkFileChats($, appDir).catch(() => [] as Chat[])
     const all = [...code, ...cowork].sort((a, b) => b.lastActivityAt - a.lastActivityAt)
 

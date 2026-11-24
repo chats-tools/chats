@@ -23,7 +23,7 @@ For use, read the [main README](../README.md). This file is for people who chang
 - **A gear (⚙)** after each chat, after "My groups", after "Cowork Projects" and after a picked group. It opens a floating card of plain buttons: the groups of the chat (a ✓ on each group it is in; a click puts it in or takes it out), new group, Bold, Important, Edit groups (Rename and Delete), and show or hide projects.
 - **Delete** asks "are you sure". It has a 20-second Undo next to "My groups". Esc closes a card.
 - **Bold and Important** (orange) marks. A chat title can also start with `***` or `!` to set them.
-- **A legend** at the bottom, then the version of the code that draws the panel ("/chats v0.12.4"), read from `.claude-plugin/plugin.json`.
+- **A legend** at the bottom, then the version of the code that draws the panel ("/chats v0.13.2"), read from `.claude-plugin/plugin.json`.
 
 After `/reload-plugins`, the panel comes back by itself.
 
@@ -37,6 +37,7 @@ Each open Code chat runs its own copy of the mod, loaded when the chat starts. `
 | `hooks/appcache.ts` | The reader of the saved copy of the Claude app. |
 | `hooks/chatline.tsx` | A Client. It draws one clickable, styled chat line. |
 | `hooks/demo.ts` | Demo mode. |
+| `hooks/said.ts` | The time of a Code chat's last message. |
 | `hooks/hooks.json` | The list of modules. |
 | `types/index.d.ts` | The state contract. |
 | `tests/pane.test.tsx` | Draws the pane in several states. |
@@ -102,6 +103,7 @@ Keep these in mind. Each one cost time.
 - A renamed project is followed by its id (`projectIds`).
 - Runs of scheduled tasks have no project. They end with "| Scheduled".
 - The Code chat on screen comes from `LocalSessions.setFocusedSession` in `main.log`.
+- A Code chat's time is the time of its last user or assistant line in its transcript (`~/.claude/projects/<cwd>/<cli id>.jsonl`). The app's `lastActivityAt` also moves when no work happens (a timer, a reconnect), so a chat that was quiet for hours could show "22m". `lastActivityAt` is used only when there is no transcript. A working chat keeps the later of the two. `hooks/said.ts` and `last_said_ms` in `chats.py` keep this rule. `tests/said.test.tsx` and `python3 chatsbar/test_said.py` check it.
 - Each list shows at most 12 chats. The constant is `TAB_COUNT` in both readers.
 - One Cowork task can come in two forms. The sidebar list can hold a short form with no `workspace_session_id`, so it looks like a plain chat. A project page holds the full form. The reader keeps the task id for the chat's uuid, and merges the two into one Cowork line. `tests/dedupe.test.tsx` checks this.
 
