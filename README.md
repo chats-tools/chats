@@ -31,7 +31,7 @@ Your project is not one chat. It is a Code chat that builds it, two agents, a Co
 - **Recent chats.** Recent, No project, Code, and each Cowork project, newest first.
 - **Float it.** Open the panel in its own window and keep it beside everything else.
 - **Marks.** Make a chat **Bold** or orange **Important**. Or start its title with `***` or `!`.
-- **Context bar.** How full the context of the Code chat on your screen is. It works only for Claude Code chats; it hides when a Cowork chat is on screen.
+- **Context bar.** How full the context of the Code chat on your screen is. It works only for Claude Code chats; when a Cowork chat is on screen, it shows an empty gray bar with "not available for Cowork chats". It never hides, so the list does not move.
 - **Private.** It works only on your Mac. No network. No tokens. No login cookie.
 
 ![The panel in its own window](docs/images/panel-floating-window.png)

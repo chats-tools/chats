@@ -50,6 +50,8 @@ const view = atom(
 const BAR_CELLS = 10
 // The bar names as the Claude app's usage menu writes them.
 const BAR_NAMES: Record<string, string> = { '5h': '5-hour limit', Week: 'Weekly · all models', Fable: 'Weekly · Fable', Context: 'Context · this Claude Code chat' }
+// The context bar while a Cowork chat is on screen: the same height as a real bar, gray, no figure.
+const COWORK_CONTEXT_BAR = { label: 'Context', name: 'Context · not available for Cowork chats', percent: 0, note: '', isActive: false }
 // The colors of the context bar's parts, as the Claude app's Context card; any other part gray.
 const CONTEXT_COLORS: Record<string, string> = {
   Messages: '#4a8fe7',
@@ -685,7 +687,7 @@ async function shownCodeChat($: EngineInterface): Promise<string> {
   const text = await $.fs.read(p, { offset: start, length: Math.min(4_194_304, size - start) })
   let id = focus.id
   // "null": no Code tab chat has focus (a Cowork chat, or the app in the back). The context bar
-  // is then hidden, so it does not stay on a Cowork chat.
+  // is then empty (COWORK_CONTEXT_BAR), so it does not show a Code chat's figure on a Cowork chat.
   for (const m of text.matchAll(/setFocusedSession: sessionId=(local_[0-9a-f-]+|null)/g)) id = m[1] ?? id
   focus = { size, id }
   return id
@@ -840,7 +842,9 @@ async function refresh($: EngineInterface) {
       const otherTokens = other !== undefined ? await codeChatTokens($, appDir, shown).catch(() => undefined) : undefined
       const short = (t: string) => (t.length > 28 ? `${t.slice(0, 27)}…` : t)
       if (isNoCodeChat) {
-        // No bar: a Cowork chat (or no Code chat) is on screen.
+        // A Cowork chat (or no Code chat) is on screen: an empty gray bar with a note, not no bar.
+        // A hidden bar moved the list up and down, so a click hit the wrong chat.
+        bars.push({ ...COWORK_CONTEXT_BAR })
       } else if (other !== undefined && otherTokens !== undefined) {
         const win = ctx?.window ?? 1_000_000
         bars.push({

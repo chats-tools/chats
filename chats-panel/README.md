@@ -17,13 +17,13 @@ For use, read the [main README](../README.md). This file is for people who chang
 ## What the panel shows
 
 - **Usage bars** in the style of the Claude app. The name is on the left. Text like "23% · Resets 3h" is on the right. A thin bar is below. The bar is blue. It turns yellow from 70% and red from 90%. The bars are: 5-hour limit, Weekly · all models, and Weekly · Fable (only when your plan has that limit).
-- **A context bar** for the Code chat on screen ("Context · <title>"). It has colored parts for the chat that opened the panel. It is hidden when a Cowork chat is on screen.
+- **A context bar** for the Code chat on screen ("Context · <title>"). It has colored parts for the chat that opened the panel. When a Cowork chat is on screen, it is an empty gray bar: "Context · not available for Cowork chats". It never hides, so the list under it does not move.
 - **Working now, My groups, Recent chats** (Recent, No project, Code) and **Cowork Projects**.
 - **One line for each chat.** A state dot (green is working, gray is idle with its time). The title. Then "| project | Cowork", or "| Code". Runs of scheduled tasks end with "| Scheduled". A click on the line opens the chat. The row under the pointer turns gray.
 - **A gear (⚙)** after each chat, after "My groups", after "Cowork Projects" and after a picked group. It opens a floating card of plain buttons: the groups of the chat (a ✓ on each group it is in; a click puts it in or takes it out), new group, Bold, Important, Edit groups (Rename and Delete), and show or hide projects.
 - **Delete** asks "are you sure". It has a 20-second Undo next to "My groups". Esc closes a card.
 - **Bold and Important** (orange) marks. A chat title can also start with `***` or `!` to set them.
-- **A legend** at the bottom, then the version of the code that draws the panel ("/chats v0.13.2"), read from `.claude-plugin/plugin.json`.
+- **A legend** at the bottom, then the version of the code that draws the panel ("/chats v0.13.3"), read from `.claude-plugin/plugin.json`.
 
 After `/reload-plugins`, the panel comes back by itself.
 
